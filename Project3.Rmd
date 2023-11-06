@@ -1,11 +1,15 @@
 ---
 title: "Project 3"
 output: github_document
+params: 
+  Education: 
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Introduction
+
 
 ## Load packages
 ```{r load packages, echo=FALSE}
@@ -14,12 +18,13 @@ library(caret)
 ```
 
 ## Data processing
+
 ```{r}
 diabetes <- read.csv("diabetes_binary_health_indicators_BRFSS2015.csv")
 
 diabetes <- diabetes %>% mutate(
   Education = if_else(Education == 1, 2, Education) %>% as.factor()
-)
+) # merge group Edu=1 into group Edu=2
 
 columns_to_factor <- c("Diabetes_binary",
                        "HighBP",
@@ -40,64 +45,138 @@ columns_to_factor <- c("Diabetes_binary",
                        "Age",
                        "Income")
 
-diabetes[, columns_to_factor] <- lapply(diabetes[, columns_to_factor], factor)
+diabetes[, columns_to_factor] <- lapply(diabetes[, columns_to_factor], factor) # change the column type to factor
 
 diabetes$Diabetes_binary <- as.factor(diabetes$Diabetes_binary)
 
-Edu2 <- subset(diabetes, Education == 2)
+Diabetes_Edu <- subset(diabetes, Education == 2) # change to params$Education
+```
 
+## EDA and Summarizations
 
+```{r}
 
-set.seed(12345)
-train <- sample(1:nrow(Edu2), size = nrow(Edu2)*0.7) # 70/30 split
-test <- dplyr::setdiff(1:nrow(Edu2), train)
-diabetes_train <- Edu2[train,]
-daibetes_test <- Edu2[test,]
+summary(Diabetes_Edu$Diabetes_binary) # check the response variable
+
+plot(select(Diabetes_Edu, c("BMI","MentHlth","PhysHlth"))) # check the correlation of numeric variables.
+
+table(Diabetes_Edu$Diabetes_binary,Diabetes_Edu$HighChol) # contingency table 
+
+table(Diabetes_Edu$Diabetes_binary, Diabetes_Edu$Smoker)
+
 ```
 
 
-## Logistic Regression Models
+## Modeling
+
+### Splitting Train and Test data sets
+
+```{r}
+set.seed(12345)
+train <- sample(1:nrow(Diabetes_Edu), size = nrow(Diabetes_Edu)*0.7) # 70/30 split
+test <- dplyr::setdiff(1:nrow(Diabetes_Edu), train)
+diabetes_train <- Diabetes_Edu[train,]
+daibetes_test <- Diabetes_Edu[test,]
+```
+
+### Log-loss
+
+Log-loss, also known as cross-entropy loss or logistic loss, is a commonly used metric in machine learning and specifically in classification problems. It measures the performance of a classification model whose output is a probability value between 0 and 1.
+
+Log-loss is a more informative metric than accuracy for several reasons:
+
+- It penalizes models for being confident in their wrong predictions. Accuracy simply counts the number of correct predictions, but it does not consider how confident the model was in those predictions. A model that is confident in its wrong predictions is more likely to make mistakes in the future. Log-loss penalizes models for being confident in their wrong predictions, which encourages them to be more cautious.
+
+- It is robust to imbalanced datasets. When a dataset is imbalanced, one class may be much more common than the other class. This can lead to models that are biased towards predicting the majority class. Accuracy is not robust to imbalanced datasets, as it can be high even if the model is simply predicting the majority class all the time. Log-loss is robust to imbalanced datasets, as it penalizes models for being confident in their wrong predictions, even if they are predicting the majority class.
+
+- It is more sensitive to small changes in model performance. Accuracy is a step function, meaning that it only changes when a model makes a mistake. Log-loss is a continuous function, meaning that it changes even when a model's predictions are slightly off. This makes log-loss a more sensitive metric for evaluating model performance, and it can be used to identify areas where a model can be improved.
+
+In general, log-loss is a better metric than accuracy for evaluating the performance of machine learning models, particularly for classification problems. It is more informative, robust to imbalanced datasets, and more sensitive to small changes in model performance.
+
+
+### Logistic Regression
+
+Logistic regression is a statistical model that is used to predict the probability of a binary outcome. Logistic regression models are trained on historical data that includes both the outcome variable and a set of predictor variables. The model then learns to predict the probability of the outcome variable for new data points based on the values of the predictor variables.
+
+Logistic regression models are a type of supervised learning model, which means that they are trained on labeled data. Labeled data is data where each data point has a known outcome value. This allows the model to learn the relationship between the predictor variables and the outcome variable.
+
+We can use logistic regression on this project because the outcome of the dataset, Diabetes_binary, is in binary format.
 
 ```{r}
 
 # Model 1: Forward Selection
 Model_1_Forward <- train(
   Diabetes_binary ~ . -Education,
-  data = diabetes,
+  data = diabetes_train,
   method = "glmStepAIC",
   family = "binomial",
   direction = "forward",
-  preProcess = c("center","scale"),
-  trControl = trainControl(method = "cv", number = 10)
+  metric = "logLoss",
+  trace = FALSE,
+  trControl = trainControl(method = "cv", 
+                           number = 5,
+                           preProcOptions = c("center","scale"))
   )
 
 
-# Model 2
+# Model 2: Backward Selection
 Model_2_Backward <- train(
   Diabetes_binary ~ . -Education,
-  data = diabetes,
+  data = diabetes_train,
   method = "glmStepAIC",
   family = "binomial",
   direction = "backward",
-  preProcess = c("center","scale"),
-  trControl = trainControl(method = "cv", number = 10)
+  metric = "logLoss",
+  trace = FALSE,
+  trControl = trainControl(method = "cv", 
+                           number = 5,
+                           preProcOptions = c("center","scale"))
   )
 
 
-# Model 3
-
-Model_3_LReg <- train(
-  
-)
+# Model 3: Full model
+Model_3_Full <- train(
+  Diabetes_binary ~ . -Education,
+  data = diabetes_train,
+  method = "glm",
+  metric = "logLoss",
+  trace = FALSE,
+  trControl = trainControl(method = "cv", 
+                           number = 5,
+                           preProcOptions = c("center","scale"))
+  )
 
 ```
 
-## LASSO Logistic Regression Model
+### LASSO Logistic Regression Model
 
-## Classification Tree Model
+### Classification Tree Model
 
-## Random Forest Model
+### Random Forest Model
 
-## Bagged Tree Model?
+A random forest is a machine learning algorithm that uses a collection of decision trees to make predictions. Decision trees are a type of supervised learning algorithm that can be used for classification and regression tasks. They work by building a tree-like structure that splits the data into different branches based on the values of the features. The leaves of the tree represent the predictions.
 
-## Boosted Tree Model?
+Random forests differ from decision trees in two main ways:
+
+ - Random forests use multiple decision trees. This is called ensemble learning. By averaging the predictions of multiple decision trees, random forests can reduce the risk of overfitting and improve the overall accuracy of the model.
+ 
+ - Random forests use a random subset of features to build each decision tree. This is called feature bagging. Feature bagging helps to reduce the correlation between the decision trees, which further improves the accuracy of the model.
+
+```{r}
+Model_rf <- train(
+  Diabetes_binary ~ . -Education,
+  data = diabetes_train,
+  method = "rf",
+  metric = "logLoss",
+  trControl = trainControl(method = "cv", 
+                           number = 5,
+                           preProcOptions = c("center","scale")),
+  tuneGrid = data.frame(mtry = seq(1:10))
+  )
+
+```
+
+
+### Bagged Tree Model?
+
+### Boosted Tree Model?
