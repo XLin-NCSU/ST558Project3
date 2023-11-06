@@ -1,0 +1,103 @@
+---
+title: "Project 3"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+```{r load packages, echo=FALSE}
+library(tidyverse)
+library(caret)
+```
+
+## Data processing
+```{r}
+diabetes <- read.csv("diabetes_binary_health_indicators_BRFSS2015.csv")
+
+diabetes <- diabetes %>% mutate(
+  Education = if_else(Education == 1, 2, Education) %>% as.factor()
+)
+
+columns_to_factor <- c("Diabetes_binary",
+                       "HighBP",
+                       "HighChol",
+                       "CholCheck",
+                       "Smoker",
+                       "Stroke",
+                       "HeartDiseaseorAttack",
+                       "PhysActivity",
+                       "Fruits",
+                       "Veggies",
+                       "HvyAlcoholConsump",
+                       "AnyHealthcare",
+                       "NoDocbcCost",
+                       "GenHlth",
+                       "DiffWalk",
+                       "Sex",
+                       "Age",
+                       "Income")
+
+diabetes[, columns_to_factor] <- lapply(diabetes[, columns_to_factor], factor)
+
+diabetes$Diabetes_binary <- as.factor(diabetes$Diabetes_binary)
+
+Edu2 <- subset(diabetes, Education == 2)
+
+
+
+set.seed(12345)
+train <- sample(1:nrow(Edu2), size = nrow(Edu2)*0.7) # 70/30 split
+test <- dplyr::setdiff(1:nrow(Edu2), train)
+diabetes_train <- Edu2[train,]
+daibetes_test <- Edu2[test,]
+```
+
+
+## Logistic Regression Models
+
+```{r}
+
+# Model 1: Forward Selection
+Model_1_Forward <- train(
+  Diabetes_binary ~ . -Education,
+  data = diabetes,
+  method = "glmStepAIC",
+  family = "binomial",
+  direction = "forward",
+  preProcess = c("center","scale"),
+  trControl = trainControl(method = "cv", number = 10)
+  )
+
+
+# Model 2
+Model_2_Backward <- train(
+  Diabetes_binary ~ . -Education,
+  data = diabetes,
+  method = "glmStepAIC",
+  family = "binomial",
+  direction = "backward",
+  preProcess = c("center","scale"),
+  trControl = trainControl(method = "cv", number = 10)
+  )
+
+
+# Model 3
+
+Model_3_LReg <- train(
+  
+)
+
+```
+
+## LASSO Logistic Regression Model
+
+## Classification Tree Model
+
+## Random Forest Model
+
+## Bagged Tree Model?
+
+## Boosted Tree Model?
