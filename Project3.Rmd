@@ -1,17 +1,23 @@
 ---
 title: "Project 3"
 output: github_document
+author: Xi Lin, Sarat Bantupalli
 params: 
-  Education: 
+  Education: 2
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+### This report is for Education level `r params$Education`.
+
 ## Introduction
 
 
+
 ## Load packages
+
 ```{r load packages, echo=FALSE}
 library(tidyverse)
 library(caret)
@@ -25,6 +31,8 @@ diabetes <- read.csv("diabetes_binary_health_indicators_BRFSS2015.csv")
 diabetes <- diabetes %>% mutate(
   Education = if_else(Education == 1, 2, Education) %>% as.factor()
 ) # merge group Edu=1 into group Edu=2
+
+diabetes$Diabetes_binary <- if_else(diabetes$Diabetes_binary == 0, "No_Diabete","Diabete")
 
 columns_to_factor <- c("Diabetes_binary",
                        "HighBP",
@@ -45,11 +53,10 @@ columns_to_factor <- c("Diabetes_binary",
                        "Age",
                        "Income")
 
+
 diabetes[, columns_to_factor] <- lapply(diabetes[, columns_to_factor], factor) # change the column type to factor
 
-diabetes$Diabetes_binary <- as.factor(diabetes$Diabetes_binary)
-
-Diabetes_Edu <- subset(diabetes, Education == 2) # change to params$Education
+Diabetes_Edu <- subset(diabetes, Education == params$Education)
 ```
 
 ## EDA and Summarizations
@@ -62,7 +69,7 @@ plot(select(Diabetes_Edu, c("BMI","MentHlth","PhysHlth"))) # check the correlati
 
 table(Diabetes_Edu$Diabetes_binary,Diabetes_Edu$HighChol) # contingency table 
 
-table(Diabetes_Edu$Diabetes_binary, Diabetes_Edu$Smoker)
+table(Diabetes_Edu$Diabetes_binary, Diabetes_Edu$Smoker) # contingency table 
 
 ```
 
@@ -106,7 +113,7 @@ We can use logistic regression on this project because the outcome of the datase
 
 # Model 1: Forward Selection
 Model_1_Forward <- train(
-  Diabetes_binary ~ . -Education,
+  Diabetes_binary ~ .-Education,
   data = diabetes_train,
   method = "glmStepAIC",
   family = "binomial",
@@ -115,7 +122,9 @@ Model_1_Forward <- train(
   trace = FALSE,
   trControl = trainControl(method = "cv", 
                            number = 5,
-                           preProcOptions = c("center","scale"))
+                           preProcOptions = c("center","scale"),
+                           summaryFunction = mnLogLoss,
+                           classProbs = TRUE)
   )
 
 
@@ -130,7 +139,9 @@ Model_2_Backward <- train(
   trace = FALSE,
   trControl = trainControl(method = "cv", 
                            number = 5,
-                           preProcOptions = c("center","scale"))
+                           preProcOptions = c("center","scale"),
+                           summaryFunction = mnLogLoss,
+                           classProbs = TRUE)
   )
 
 
@@ -143,14 +154,32 @@ Model_3_Full <- train(
   trace = FALSE,
   trControl = trainControl(method = "cv", 
                            number = 5,
-                           preProcOptions = c("center","scale"))
+                           preProcOptions = c("center","scale"),
+                           summaryFunction = mnLogLoss,
+                           classProbs = TRUE)
   )
 
+Model_1_Forward
+Model_2_Backward
+Model_3_Full
+
 ```
+The Logloss value of Forward selection model is `Model_1_Forward$results$logLoss`, the Logloss value of Backward selection model is `Model_2_Backward$results$logLoss`, and the Logloss value of Full model is `Model_3_Full$results$logLoss`. The second model has the lowest Logloss value, so it is the "best" model in these three.  
+
 
 ### LASSO Logistic Regression Model
 
+```{r}
+
+```
+
+
 ### Classification Tree Model
+
+```{r}
+
+```
+
 
 ### Random Forest Model
 
@@ -163,6 +192,8 @@ Random forests differ from decision trees in two main ways:
  - Random forests use a random subset of features to build each decision tree. This is called feature bagging. Feature bagging helps to reduce the correlation between the decision trees, which further improves the accuracy of the model.
 
 ```{r}
+
+# Random Forest Model
 Model_rf <- train(
   Diabetes_binary ~ . -Education,
   data = diabetes_train,
@@ -170,13 +201,54 @@ Model_rf <- train(
   metric = "logLoss",
   trControl = trainControl(method = "cv", 
                            number = 5,
-                           preProcOptions = c("center","scale")),
+                           preProcOptions = c("center","scale"),
+                           summaryFunction = mnLogLoss,
+                           classProbs = TRUE),
   tuneGrid = data.frame(mtry = seq(1:10))
   )
 
 ```
 
 
-### Bagged Tree Model?
+### Partial Least Squares Model
 
-### Boosted Tree Model?
+Partial Least Squares (PLS) is a statistical method that is often used in regression and classification analysis. PLS regression is commonly employed when there are high collinearity among the predictor variables, and it aims to find the directions (latent variables or components) that explain both the variance in the predictor variables and the variance in the response variable.
+
+Partial Least Squares Discriminant Analysis (PLS-DA) is an extension of PLS that is specifically used for classification purposes. PLS-DA combines elements of principal component analysis (PCA) and canonical correlation analysis to find the linear combinations of the original variables (features) that best discriminate between different classes in the response variable.
+
+In the context of classification, the goal of PLS-DA is to find a set of latent variables (components) that maximize the separation between different classes while also explaining the variance in the predictor variables. These latent variables are then used to build a predictive model for classifying new observations into predefined classes.
+
+PLS and PLS-DA are commonly used in fields such as chemometrics, biology, and other areas where there are complex relationships between variables and a need for effective classification or regression models. They are particularly useful when dealing with high-dimensional data or when there are multicollinearity issues among the predictor variables.
+
+```{r}
+
+# Partial Least Squares Model
+Model_pls <- train(
+  Diabetes_binary ~ . -Education,
+  data = diabetes_train,
+  method = "pls",
+  metric = "logLoss",
+  trControl = trainControl(method = "cv", 
+                           number = 5,
+                           preProcOptions = c("center","scale"),
+                           summaryFunction = mnLogLoss,
+                           classProbs = TRUE),
+  tuneGrid = data.frame(ncomp = seq(1:15))
+  )
+
+```
+
+
+### Another Model
+
+```{r}
+
+```
+
+
+## Final Model Selection
+
+```{r}
+
+```
+

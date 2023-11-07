@@ -1,14 +1,15 @@
-rmarkdown::render("Project3.Rmd", output_format = "Edu1_2.md",
-                  params = list(Education = "2"))
+library(rmarkdown)
+library(tidyverse)
 
-rmarkdown::render("Project3.Rmd", output_format = "Edu3.md",
-                  params = list(Education = "3"))
+Education_Group <- c(2,3,4,5,6)
 
-rmarkdown::render("Project3.Rmd", output_format = "Edu4.md",
-                  params = list(Education = "4"))
+output_file <- paste0("Education Group ",Education_Group,".md")
 
-rmarkdown::render("Project3.Rmd", output_format = "Edu5.md",
-                  params = list(Education = "5"))
+params = lapply(Education_Group, FUN = function(x){list(Education = x)})
 
-rmarkdown::render("Project3.Rmd", output_format = "Edu6.md",
-                  params = list(Education = "6"))
+reports <- tibble(output_file, params)
+
+apply(reports, MARGIN = 1,
+      FUN = function(x){
+        render(input = "Project3.Rmd", output_file = x[[1]], params = x[[2]], github_document(html_preview = FALSE))
+      })
