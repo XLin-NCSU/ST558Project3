@@ -12,66 +12,167 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE
 
 ### This report is for Education level `r params$Education`.
 
-## Introduction
-edits
+## Required Packages
 
-
-## Load packages
-
-```{r load packages, echo=FALSE}
+```{r packages, echo=FALSE}
 library(tidyverse)
+library(corrplot)
 library(caret)
 ```
 
-## Data processing
 
-```{r}
-diabetes <- read.csv("diabetes_binary_health_indicators_BRFSS2015.csv")
+## Introduction
+This project creates predictive models using available data and automates R Markdown reports. We demonstrated it by using [Diabates Health Indicators Data](https://www.kaggle.com/datasets/alexteboul/diabetes-health-indicators-dataset) collected by the Centers of Disease Control and Prevention (CDC).  
 
-diabetes <- diabetes %>% mutate(
-  Education = if_else(Education == 1, 2, Education) %>% as.factor()
-) # merge group Edu=1 into group Edu=2
+The data was collected through a telephonic survey by the CDC in the year 2015 and it corresponds to the prevalence of diabetes in the survey respondents. The data set we analyzed here represents responses from 253,680 Americans on health-related risk behaviors, chronic health conditions, and the use of preventative services. The data set itself is *not balanced*.  
 
-diabetes$Diabetes_binary <- if_else(diabetes$Diabetes_binary == 0, "No_Diabete","Diabete")
+### Model Variables
+The response variable of interest from the data set is *Diabetes_binary*. It represents if the survey respondent is *non diabetic (value 0)* or *pre-diabetic/ diabetic (value 1)*.
 
+The explanatory variables were chosen such that important risk factors for diabetes including health & lifestyle, socioeconomic status, and demographics (age and sex) are considered in the predictive model. We included the following explanatory variables for the model:  
+
++ *HighBP*: This variable represents if a respondent was diagnosed with high blood pressure (value 1) or not (value 0). Research indicates high blood pressure is twice as likely to strike a person with diabetes than a person without diabetes  
++ *HighChol*: This variable represents if a respondent has high cholesterol (value 1) or not (value 0). Research suggests people with diabetes tend to have higher cholesterol levels and was included in the model  
++ *BMI*: The body mass index, a numerical variable, is a good indicator for obesity and represents the overall health of a person making it an ideal candidate for the model  
++ *Smoker*: Smoking increases the risk of type 2 diabetes and hence was included in the model. This variable can take two values, 0- did not smoke 100 cigarettes in lifetime or 1- smoked more than 100 cigarettes in lifetime  
++ *PhysicalActivity*: This variable indicates if the respondent had been physically active in the past 30 days. A value 0 represents no while 1 represents yes  
++ *Fruits*: A healthy diet is key to reducing the risk of type 2 diabetes and can represent lifestyle and socioeconomic status of the respondent. This variable indicates if the person is eating healthy or not. A value of 0 indicates no fruit consumed per day while 1 indicates some fruit consumed per day  
++ *Veggies*: This variable indicates if the person is eating healthy or not. It can represent lifetsyle and socioeconomic status of the respondent. A value of 0 indicates no veggies consumed per day while 1 indicates some veggies consumed per day  
++ *HvyAlcoholConsump*: Alcohol increases the risk of type 2 diabetes and this variable encapsulates if the respondent is a heavy drinker  
++ *AnyHealthcare*: This variable represents socioeconomic status of the respondent, with low-income respondents not having any health coverage (value 0) while higher income respondents having some type of health coverage (value 1)  
++ *GenHlth*: This represents the overall health of the respondent ranging from 1 through 5 with 1 being the best health indicator  
++ *MentHlth*: This numerical variable represents days of poor mental health (1-30 days). People with mental health are 2 to 3 times more likely to have a depression than people without diabetes. This variable captures the overall health of the respondent  
++ *PhysHlth*: This numerical variable indicates physical illness or injury days in past 30 days. Illness or injury can impact physical activity which in turn could affect type 2 diabetes risk  
++ *Sex*: Including the sex of the respondent (0- female, 1- male) could help us see if risk factors are different for men and women  
++ *Age*: Risk for type 2 diabetes increases with age. This 13 level categorical variable encapsulates this risk  
++ *Education*: Education might effect the socioeconomic status of a person and change the risk factor for type 2 diabetes. This variable was used to automate the R Markdown reports. Each report represents analysis for each level of this variable. A value of 2 indicates the respondent attended elementary school or less while 6 represents a college graduate  
++ *Income*: This categorical variable can effect a lot risks for type 2 diabetes including access to health care, physical activity (eg. gym), and or healthy lifestyle. A value of 1 indicates low income (less than $10,000), and a value of 8 indicates high income (>$75,000)  
+
+### Purpose of Modeling
+
+describes the purpose of your EDA and modeling, along with the end result you will be creating (see
+below).
+
+
+## Data Processing
+The data for the analysis was read using the `read_csv` function from the `readr` package and stored in the R object, *diabetes*. Then for the variable *Education*, groups 1 and 2 were combined into *group 2*. This was done to have five distinct groups for this variable ranging from 2 through 5.  
+
+Then some of the explanatory variables we are interested in were converted to factors. Variables that were converted to factors with meaningful level names include *HighBP*, *HighChol*,  
+
+The data was then subset to represent different *Education* levels of the respondents in the survey.
+
+```{r data_processing}
+#Read in data using the read_csv function from readr package
+diabetes <- read_csv("diabetes_binary_health_indicators_BRFSS2015.csv")
+
+#Combine groups 1 and 2 into group 2 for Education variable
+diabetes <- diabetes %>% 
+  mutate(Education = if_else(Education == 1, 2, Education) %>% as.factor())
+
+
+diabetes$Diabetes_binary <- if_else(diabetes$Diabetes_binary == 0, 
+                                    "No_Diabetes","Diabetes")
+
+# Create a vector with the columns we want to convert to factors
 columns_to_factor <- c("Diabetes_binary",
                        "HighBP",
                        "HighChol",
-                       "CholCheck",
                        "Smoker",
-                       "Stroke",
-                       "HeartDiseaseorAttack",
                        "PhysActivity",
                        "Fruits",
                        "Veggies",
                        "HvyAlcoholConsump",
                        "AnyHealthcare",
-                       "NoDocbcCost",
                        "GenHlth",
-                       "DiffWalk",
                        "Sex",
                        "Age",
                        "Income")
 
+# Change the columns we are interested in to a factor using the lapply function
+diabetes[, columns_to_factor] <- lapply(diabetes[, columns_to_factor], factor)
 
-diabetes[, columns_to_factor] <- lapply(diabetes[, columns_to_factor], factor) # change the column type to factor
-
-Diabetes_Edu <- subset(diabetes, Education == params$Education)
+# Subset the data to work on the Education level of interest
+#Diabetes_Edu <- subset(diabetes, Education == params$Education)
+diabetes_education_level <- subset(diabetes, Education == params$Education) %>% 
+  select(-Education)
 ```
 
-## EDA and Summarizations
+## Summarizations and Exploratory Data Analysis (EDA)
+Here Exploratory Data Analysis on the full data (for the particular education level) was performed to look at trends in data, and correlations between variables.
+
+### Summary Tables
+The full data set was summarized into several tables as part of the EDA. The tables below give key information about the data including:  
++ *Summary Count of Observations* for response Variable at each level: a measure to check if the data is balanced or not balanced for the response variable  
++ *Summary Statistics of Response Variable* with respect to different explanatory variables including *BMI*, *Mental_Health*, and *Physical_Health* of the survey respondent. These explanatory variables were chosen based on the fact that they are *numerical, and represent the general overall health of the respondent* The reader should look for the average value of explanatory variable for each setting of response variable  
++ Contingency tables: 3-way contingency table summarizing diabetes status based on demographic (age and sex) of the respondent. The reader should look for trends in diabetes status based on age and sex of the respondents.
+
+
+```{r tables}
+# Check for the balance of data 
+summary(diabetes_education_level$Diabetes_binary)
+
+# # Using the `group_by()` function, to find the summary BMI for 
+# diabetes vs non-diabetes respondents in the survey
+diabetes_education_level %>% group_by(Diabetes_binary) %>% 
+  summarise(avg = mean(BMI), sd = sd(BMI),
+            min = min(BMI), max = max(BMI))
+
+# Summary Mental Health for diabetes vs non-diabetes respondents in the survey
+diabetes_education_level %>% group_by(Diabetes_binary) %>% 
+  summarise(avg = mean(MentHlth), sd = sd(MentHlth),
+            min = min(MentHlth), max = max(MentHlth))
+
+# Summary Physical Health for diabetes vs non-diabetes respondents in the survey
+diabetes_education_level %>% group_by(Diabetes_binary) %>% 
+  summarise(avg = mean(PhysHlth), sd = sd(PhysHlth),
+            min = min(PhysHlth), max = max(PhysHlth))
+
+# 3-way contingency table for diabetes status, age and sex
+table(diabetes_education_level$Age, diabetes_education_level$Sex,
+      diabetes_education_level$Diabetes_binary)
+
+# contingency table 
+table(diabetes_education_level$Diabetes_binary,
+      diabetes_education_level$HighChol) 
+# contingency table
+table(diabetes_education_level$Diabetes_binary, 
+      diabetes_education_level$Smoker)  
+
+```
+
+
+
+### Summary Plots
+The full data set was summarized into several plots as part of the EDA.The plots below give key information about the data including:  
++ *Correlation of Numeric Variables*: The reader should look for any strong (positive or negative) correlation among the numeric variables to minimize collinearity  
++ *Barplot of respondents age and diabetes status*: The reader should look for trends in the age group of respondents and number of diabetic patients. A high number of diabetic patients in lower age groups might indicate an unhealthy life style or no access to health care or other issues which could be of public health concern
++ *Physical_Health* of the survey respondent. These explanatory variables were chosen based on the fact that they are *numerical, and represent the general overall health of the respondent* The reader should look for the average value of explanatory variable for each setting of response variable  
++ Contingency tables: 3-way contingency table summarizing diabetes status based on demographic (age and sex) of the respondent. The reader should look for trends in diabetes status based on age and sex of the respondents.
+
+
 
 ```{r}
+# Correlation of numeric variables.
+Correlation <- cor(select(diabetes_education_level, 
+                          c("BMI","MentHlth","PhysHlth")))
+corrplot(Correlation,  tl.pos = "lt")
 
-summary(Diabetes_Edu$Diabetes_binary) # check the response variable
+# Barplot of respondents age and diabetes status
+g1 <- ggplot(data = diabetes_education_level, aes(x = Age)) +
+  labs(x = "Age Group", title = "Bar Plot of Age of Respondents in the diabetes study",
+       y = "number of respondents") + 
+  scale_fill_discrete(name = "Diabetes Status", labels = c("Have diabetes", "Don't have diabetes"))
+g1 + geom_bar(aes(fill = Diabetes_binary)) + theme_bw()
 
-plot(select(Diabetes_Edu, c("BMI","MentHlth","PhysHlth"))) # check the correlation of numeric variables.
-
-table(Diabetes_Edu$Diabetes_binary,Diabetes_Edu$HighChol) # contingency table 
-
-table(Diabetes_Edu$Diabetes_binary, Diabetes_Edu$Smoker) # contingency table 
-
+# Scatter plot of 
+g2 <- 
 ```
+
+
+numeric_securities_data <- securities_data_wide %>% select(where(is.numeric)) 
+Correlation <- cor(numeric_securities_data)
+
+#A graphical summary of the correlation matrix was created using the corrplot library.
 
 
 ## Modeling
@@ -80,10 +181,10 @@ table(Diabetes_Edu$Diabetes_binary, Diabetes_Edu$Smoker) # contingency table
 
 ```{r}
 set.seed(12345)
-train <- sample(1:nrow(Diabetes_Edu), size = nrow(Diabetes_Edu)*0.7) # 70/30 split
-test <- dplyr::setdiff(1:nrow(Diabetes_Edu), train)
-diabetes_train <- Diabetes_Edu[train,]
-daibetes_test <- Diabetes_Edu[test,]
+train <- sample(1:nrow(diabetes_education_level), size = nrow(diabetes_education_level)*0.7) # 70/30 split
+test <- dplyr::setdiff(1:nrow(diabetes_education_level), train)
+diabetes_train <- diabetes_education_level[train,]
+daibetes_test <- diabetes_education_level[test,]
 ```
 
 ### Log-loss
