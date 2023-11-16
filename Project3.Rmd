@@ -1,9 +1,10 @@
 ---
 title: "Project 3"
-output: github_document
+#output: github_document
+output: pdf_document
 author: Xi Lin, Sarat Bantupalli
-params: 
-  Education: 2
+#params: 
+  #Education: 2
 ---
 
 ```{r setup, include=FALSE}
@@ -18,6 +19,8 @@ knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE
 library(tidyverse)
 library(corrplot)
 library(caret)
+library(MLmetrics)
+
 ```
 
 
@@ -73,6 +76,12 @@ diabetes_data <- diabetes_data %>%
 diabetes_data$Diabetes_binary <- if_else(diabetes_data$Diabetes_binary == 0, 
                                     "No_Diabetes","Diabetes")
 
+# Select only the variables we are interested in
+diabetes_data <- diabetes_data %>% 
+  select(Diabetes_binary, HighBP, HighChol, BMI, Smoker, PhysActivity,
+         Fruits, Veggies, HvyAlcoholConsump, AnyHealthcare, GenHlth,
+         MentHlth, PhysHlth, Sex, Age, Education, Income)
+
 # Create a vector with the columns we want to convert to factors
 columns_to_factor <- c("Diabetes_binary",
                        "HighBP",
@@ -92,8 +101,10 @@ columns_to_factor <- c("Diabetes_binary",
 diabetes_data[, columns_to_factor] <- lapply(diabetes_data[, columns_to_factor], factor)
 
 # Subset the data to work on the Education level of interest
-#Diabetes_Edu <- subset(diabetes, Education == params$Education)
-diabetes_education_level <- subset(diabetes_data, Education == params$Education) %>% 
+#diabetes_education_level <- subset(diabetes_data, Education == params$Education) %>% 
+  #select(-Education)
+
+diabetes_education_level <- subset(diabetes_data, Education == 2) %>% 
   select(-Education)
 ```
 
@@ -177,6 +188,17 @@ corrplot(Correlation,  tl.pos = "lt")
 
 The reader should look for any strong (positive or negative) correlation among the numeric variables to minimize collinearity.  
 
+Here we visualized trends in diabetes_status for people with different health risks: poor health (have high blood pressure, high cholesterol, and is a smoker) and good health (no high blood pressure or cholesterol, not a smoker).
+
+```{r}
+diabetes_education_level %>% group_by(Smoker, HvyAlcoholConsump) %>% 
+  ggplot(aes(x = Diabetes_binary)) + geom_bar(aes(fill = Smoker))
+
+
+```
+
+
+
 Demographics might have a role in risk for diabetes. Here we looked at trends on how age impacts diabetes_status. 
 
 ```{r}
@@ -206,184 +228,362 @@ g2 + geom_bar(aes(fill = Diabetes_binary)) + theme_bw()
 The reader should look for trends in how diabetes_status changes for men and women. 
 
 
-
-# Scatter plot of 
-g2 <- 
 ## Modeling
 
 ### Splitting Train and Test data sets
+Here the data was split into training set (70% of data) and test set (30% of data). We have used the `set.seed` function to have reproducible results.
 
 ```{r}
 set.seed(12345)
-train <- sample(1:nrow(diabetes_education_level), size = nrow(diabetes_education_level)*0.7) # 70/30 split
-test <- dplyr::setdiff(1:nrow(diabetes_education_level), train)
-diabetes_train <- diabetes_education_level[train,]
-daibetes_test <- diabetes_education_level[test,]
+# Create training data using createDataPartition function from caret package
+
+train_data_index <- createDataPartition(diabetes_education_level$Diabetes_binary, p = 0.7, 
+                                        list = FALSE)
+diabetes_train <- diabetes_education_level[train_data_index, ]
+diabetes_test <- diabetes_education_level[-train_data_index, ]
+
 ```
 
 ### Log-loss
 
-Log-loss, also known as cross-entropy loss or logistic loss, is a commonly used metric in machine learning and specifically in classification problems. It measures the performance of a classification model whose output is a probability value between 0 and 1.
+Log-loss, also known as cross-entropy loss or logistic loss, is a *common evaluation metric* for binary classification problems. It is indicative of how close the prediction probability is to the actual value. A *lower log-loss* value indicates a lower deviance in predicted probability vs observed probability and is desired.  
 
-Log-loss is a more informative metric than accuracy for several reasons:
+Log-loss is a more informative metric than other metrics like accuracy for several reasons:  
 
-- It penalizes models for being confident in their wrong predictions. Accuracy simply counts the number of correct predictions, but it does not consider how confident the model was in those predictions. A model that is confident in its wrong predictions is more likely to make mistakes in the future. Log-loss penalizes models for being confident in their wrong predictions, which encourages them to be more cautious.
++ It **penalizes models** for being confident in their wrong predictions. Accuracy simply counts the number of correct predictions, but it does not consider how confident the model was in those predictions. A model that is confident in its wrong predictions is more likely to make mistakes in the future. Log-loss penalizes models for being confident in their wrong predictions, which encourages them to be more cautious.  
++ It is **robust to imbalanced data sets**. When a data set is imbalanced (which is the case here), one class may be much more common than the other class. This can lead to models that are biased towards predicting the majority class. Accuracy is not robust to imbalanced data sets, as it can be high even if the model is simply predicting the majority class all the time. Log-loss is robust to imbalanced data sets, as it penalizes models for being confident in their wrong predictions, even if they are predicting the majority class.  
++ It is more **sensitive to small changes in model performance**. Accuracy is a step function, meaning that it only changes when a model makes a mistake. Log-loss is a continuous function, meaning that it changes even when a model's predictions are slightly off. This makes log-loss a more sensitive metric for evaluating model performance, and it can be used to identify areas where a model can be improved.  
 
-- It is robust to imbalanced datasets. When a dataset is imbalanced, one class may be much more common than the other class. This can lead to models that are biased towards predicting the majority class. Accuracy is not robust to imbalanced datasets, as it can be high even if the model is simply predicting the majority class all the time. Log-loss is robust to imbalanced datasets, as it penalizes models for being confident in their wrong predictions, even if they are predicting the majority class.
-
-- It is more sensitive to small changes in model performance. Accuracy is a step function, meaning that it only changes when a model makes a mistake. Log-loss is a continuous function, meaning that it changes even when a model's predictions are slightly off. This makes log-loss a more sensitive metric for evaluating model performance, and it can be used to identify areas where a model can be improved.
-
-In general, log-loss is a better metric than accuracy for evaluating the performance of machine learning models, particularly for classification problems. It is more informative, robust to imbalanced datasets, and more sensitive to small changes in model performance.
+In general, log-loss is a better metric than accuracy for evaluating the performance of models. Since the data set we are working on for this project is imbalanced, it is ideal to use Log-loss as the model metric when compared to accuracy. 
 
 
 ### Logistic Regression
 
-Logistic regression is a statistical model that is used to predict the probability of a binary outcome. Logistic regression models are trained on historical data that includes both the outcome variable and a set of predictor variables. The model then learns to predict the probability of the outcome variable for new data points based on the values of the predictor variables.
+Generalized linear models (GLM) are used to model non-normal distributions. Logistic regression is a very common generalized linear model that is used to predict the probability of a binary outcome (success or fail). This type of model is used for both classification and regression. Since the outcome is a probability, the response variable is constrained to values between 0 and 1.   
 
-Logistic regression models are a type of supervised learning model, which means that they are trained on labeled data. Labeled data is data where each data point has a known outcome value. This allows the model to learn the relationship between the predictor variables and the outcome variable.
+Here the probability of success is modeled using a function that does not have a closed form solution. Hence, maximum likelihood is often used to fit the parameters. In a logistic model, a log transformation of this function is performed, usually called log-odds or the *logit function*. The logit function is the *link* that linearly associates mean of response variable to the parameters in model.  
 
-We can use logistic regression on this project because the outcome of the dataset, Diabetes_binary, is in binary format.
+For the current data set, our variable of interest, Diabetes_binary, is binomial random variable i.e. it has a value of either 0 or 1. Logistic regression would be an ideal model to apply here. 
+
+#### Model 1
+Here we used the *forward selection method* to construct a regression model. We trained the model with all variables from the training data set. Only main effects were considered here. Interaction terms and higher polynomial terms were not considered. The model was with the following parameters:  
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
+
+```{r forward_selection}
+# Model 1: Forward Selection
+model_1_forward <- train( Diabetes_binary ~ .,
+                          data = diabetes_train,
+                          method = "glmStepAIC",
+                          family = "binomial",
+                          direction = "forward",
+                          metric = "logLoss",
+                          trace = FALSE,
+                          preProcess = c("center", "scale"),
+                          trControl = 
+                            trainControl(method = "cv", number = 5, 
+                                         summaryFunction = mnLogLoss, 
+                                         classProbs = TRUE))
+
+model_1_forward
+```
+
+The Logloss value of Forward selection model is `{r} model_1_forward$results$logLoss`.
+
+#### Model 2
+Here we used the *backward selection method* to construct a regression model. We trained the model with all variables from the training data set. Only main effects were considered here. Interaction terms and higher polynomial terms were not considered. The model was with the following parameters:  
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
+
+```{r backward_selection}
+# Model 2: Backward Selection
+model_2_backward <- train( Diabetes_binary ~ .,
+                           data = diabetes_train,
+                           method = "glmStepAIC",
+                           family = "binomial",
+                           direction = "backward",
+                           metric = "logLoss",
+                           trace = FALSE,
+                           preProcess = c("center", "scale"),
+                           trControl = 
+                             trainControl(method = "cv", number = 5,
+                                          summaryFunction = mnLogLoss, 
+                                          classProbs = TRUE))
+
+model_2_backward
+```
+
+The Logloss value of Backward selection model is `{r} model_2_backward$results$logLoss`.
+
+#### Model 3
+Here we fit a full logistic regression model. We trained the model with all variables from the training data set. Only main effects were considered here. Interaction terms and higher polynomial terms were not considered. The model was with the following parameters:  
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
+
+
+```{r glm}
+# Model 3: Generalized Linear Model
+model_3_glm <- train( Diabetes_binary ~ ., 
+                       data = diabetes_train,
+                       method = "glm",
+                       metric = "logLoss",
+                       trace = FALSE,
+                       preProcess = c("center", "scale"),
+                       trControl = 
+                         trainControl(method = "cv", number = 5,
+                                      summaryFunction = mnLogLoss,
+                                      classProbs = TRUE))
+
+model_3_glm
+```
+
+The Logloss value of Backward selection model is `{r} model_3_glm$results$logLoss`.
+
+#### Comparison of Models
+The logloss values for all 3 models is tabulated below.
 
 ```{r}
+result1 <- data.frame(Model_1 = model_1_forward$results$logLoss, 
+            Model_2 = model_2_backward$results$logLoss,
+            Model_3 = model_3_glm$results$logLoss)
 
-# Model 1: Forward Selection
-Model_1_Forward <- train(
-  Diabetes_binary ~ .-Education,
-  data = diabetes_train,
-  method = "glmStepAIC",
-  family = "binomial",
-  direction = "forward",
-  metric = "logLoss",
-  trace = FALSE,
-  trControl = trainControl(method = "cv", 
-                           number = 5,
-                           preProcOptions = c("center","scale"),
-                           summaryFunction = mnLogLoss,
-                           classProbs = TRUE)
-  )
-
-
-# Model 2: Backward Selection
-Model_2_Backward <- train(
-  Diabetes_binary ~ . -Education,
-  data = diabetes_train,
-  method = "glmStepAIC",
-  family = "binomial",
-  direction = "backward",
-  metric = "logLoss",
-  trace = FALSE,
-  trControl = trainControl(method = "cv", 
-                           number = 5,
-                           preProcOptions = c("center","scale"),
-                           summaryFunction = mnLogLoss,
-                           classProbs = TRUE)
-  )
-
-
-# Model 3: Full model
-Model_3_Full <- train(
-  Diabetes_binary ~ . -Education,
-  data = diabetes_train,
-  method = "glm",
-  metric = "logLoss",
-  trace = FALSE,
-  trControl = trainControl(method = "cv", 
-                           number = 5,
-                           preProcOptions = c("center","scale"),
-                           summaryFunction = mnLogLoss,
-                           classProbs = TRUE)
-  )
-
-Model_1_Forward
-Model_2_Backward
-Model_3_Full
-
+result1[1,]
 ```
-The Logloss value of Forward selection model is `Model_1_Forward$results$logLoss`, the Logloss value of Backward selection model is `Model_2_Backward$results$logLoss`, and the Logloss value of Full model is `Model_3_Full$results$logLoss`. The second model has the lowest Logloss value, so it is the "best" model in these three.  
+
+The lowest logloss value is for `{r} names(result1)[apply(result1, MARGIN = 1, FUN = which.min)]` with a value of `{r} min(result1)`. We choose **`{r} names(result1)[apply(result1, MARGIN = 1, FUN = which.min)]`** as the best model.
 
 
 ### LASSO Logistic Regression Model
 
+LASSO or Least Absolute Shrinkage and Selection Operator, is a regression analysis model that *performs both variable selection and regularization* to improve prediction accuracy. It is a **penalized** regression approach that estimates the regression coefficients by minimizing the sum of squared residuals and the sum of the absolute values of the regression coefficients multiplied with a positive constant, $\lambda$. Mathematically it can be expressed as:  
+
+$$
+L +\lambda \sum_{i = 1}^{n} |\beta_i|
+
+$$
+where L is the sum of squared residuals, and $\lambda \sum_{i = 1}^{n} |\beta_i|$ is the penalty.  
+
++ when $\lambda$ = 0, all variables are included  
++ when $\lambda$ = $\infty$, no variables are chosen  
++ usually cross-validation is used to choose the value of $\lambda$ such that some coefficients will shrink to 0  
+
+A LASSO Model uses a **L1 Regularization technique**. Regularization refers to techniques that are used to calibrate models in order to minimize modified sum of squared errors (above equation) and prevent over fitting or under fitting data. 
+
+In a linear model like basic logistic regression (essentially $\lambda$ = 0 or no penalty), they tend to have some variance, that is the model does not generalize well to data other than training set. In the case of a LASSO model, regularization significantly reduces variance of the model without an increase in bias, a balance of bias-variance trade off. This is achieved with the help of the tuning parameter, $\lambda$. As $\lambda$ increases, it reduces the value of coefficients and thus reducing the variance of the model, avoiding an over fit. But after certain increase in $\lambda$, we loose important features of the data and this will increase the bias resulting in under fitting. Hence, an optimal value of $\lambda$ is chosen using cross-validation.  
+
+Here a LASSO logistic regression model was fit with the following parameters:  
++ $\alpha$ = 1  
++ $\lambda$ : a sequence of numbers from 0 to 1 with an increment of 0.01  
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
+
+```{r lasso_fit}
+
+lasso_fit <- train(Diabetes_binary  ~ ., 
+              data = diabetes_train,
+              method = "glmnet",
+              metric = "logLoss",
+              preProcess = c("center", "scale"),
+              trControl = trainControl(method = "cv", number = 5, 
+                                       summaryFunction = mnLogLoss, classProbs = TRUE),
+              tuneGrid = expand.grid(alpha = 1, lambda=seq(0,1 , by = 0.01)))
+
+lasso_fit
+```
+
+The plot below shows the model performance with different $\lambda$ values.
+
 ```{r}
+plot(lasso_fit)
 
 ```
+
+The best LASSO model has an optimal $\lambda$ value of `{r} lasso_fit$bestTune$lambda` with a logLoss of `{r} min(lasso_fit$results$logLoss)`.
 
 
 ### Classification Tree Model
 
+Tree based method is a *non-linear* regression model used for prediction. In a tree based method, the predictor space is *split into regions*, and each region has a different prediction. For a given region, the most prevalent class is used as the prediction in a classification problem. While the mean of observations in the region is used as prediction in the case of a continuous variable.  
+
+Tree based methods use a greedy algorithm called **recursive binary splitting** to pick the splits. For every possible value of each predictor, they find the residual sum of squares (RSS) or Gini index/Deviance (for classification) and try to minimize it. The split it made at the location where RSS is split. Then the algorithm repeats the process till we have a large tree with several nodes. This tree is then pruned back using **cost-complexity pruning** so that we do not over fit the model to training data. The pruning process increases the bias but decreases the variance, finding a balance of bias-variance trade off. Cross-validation can help choosing the optimum number of nodes in a tree.  
+
+Tree based methods are flexible, very intuitive and easy to read. They also do not need interactions terms in the model. This makes them an ideal candidate to use here.  
+
+Here a classification tree model was fit with the following parameters:  
++ complexity parameter : a sequence of numbers from 0 to 0.1 with an increment of 0.001  
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
+
+```{r classification_tree}
+classification_tree <- train(Diabetes_binary ~ ., 
+                 data = diabetes_train,
+                 method = "rpart",
+                 metric = "logLoss",
+                 trControl = trainControl(method = "cv", number = 5, 
+                                          summaryFunction = mnLogLoss, classProbs = TRUE),
+                 tuneGrid = expand.grid(cp = seq(from = 0, to = 0.1, by = 0.001)))
+
+classification_tree
+```
+
+The plot below shows the model performance with different complexity parameter values.
+
 ```{r}
+ plot(classification_tree)
 
 ```
 
+The best classification tree model has an optimal complexity parameter value of `{r} classification_tree$bestTune$cp` with a logLoss of `{r} min( classification_tree$results$logLoss)`.
 
 ### Random Forest Model
 
-A random forest is a machine learning algorithm that uses a collection of decision trees to make predictions. Decision trees are a type of supervised learning algorithm that can be used for classification and regression tasks. They work by building a tree-like structure that splits the data into different branches based on the values of the features. The leaves of the tree represent the predictions.
+Random forest is a supervised non-linear machine learning algorithm that uses a collection of decision trees from bootstrap samples and averages the results to make predictions. Rather than using all the predictors for the trees, it takes a randomly selected subset of variables for each bootstrap sample/ tree fit. By using only a subset of randomly chosen predictors, the random forest model reduces the number of correlated trees and hence an overall reduction in variance occurs.  
 
-Random forests differ from decision trees in two main ways:
+Random forests differ from decision trees in two main ways:  
 
- - Random forests use multiple decision trees. This is called ensemble learning. By averaging the predictions of multiple decision trees, random forests can reduce the risk of overfitting and improve the overall accuracy of the model.
+ + Random forests use multiple decision trees. This is called ensemble learning. By averaging the predictions of multiple decision trees, random forests can reduce the risk of over fitting and improve the overall accuracy of the model.  
+ + Random forests use a random subset of features to build each decision tree. This is called feature bagging. Feature bagging helps to reduce the correlation between the decision trees, which further improves the accuracy of the model.  
  
- - Random forests use a random subset of features to build each decision tree. This is called feature bagging. Feature bagging helps to reduce the correlation between the decision trees, which further improves the accuracy of the model.
+Here the random forest method was used to fit the data with the following parameters:  
++ tuning parameter, mtry: 1 through 5 with an increment of 1. This number was arrived by dividing number of predictors by 3  
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
 
-```{r}
-
+```{r random_forest}
 # Random Forest Model
-Model_rf <- train(
-  Diabetes_binary ~ . -Education,
-  data = diabetes_train,
-  method = "rf",
-  metric = "logLoss",
-  trControl = trainControl(method = "cv", 
-                           number = 5,
-                           preProcOptions = c("center","scale"),
-                           summaryFunction = mnLogLoss,
-                           classProbs = TRUE),
-  tuneGrid = data.frame(mtry = seq(1:10))
-  )
+rf_model <- train( Diabetes_binary ~ .,
+                   data = diabetes_train,
+                   method = "rf",
+                   metric = "logLoss",
+                   trControl = 
+                     trainControl(method = "cv", number = 5,
+                                  summaryFunction = mnLogLoss, classProbs = TRUE),
+                   tuneGrid = data.frame(mtry = seq(1:5)))
 
 ```
+
+The plot below shows the model performance with different number of randomly selected predictors.
+```{r}
+plot(rf_model)
+
+```
+
+The best random forest model has `{r} rf_model$bestTune$mtry` randomly selected predictors with a logLoss of `{r} min( rf_model$results$logLoss)`.
 
 
 ### Partial Least Squares Model
 
-Partial Least Squares (PLS) is a statistical method that is often used in regression and classification analysis. PLS regression is commonly employed when there are high collinearity among the predictor variables, and it aims to find the directions (latent variables or components) that explain both the variance in the predictor variables and the variance in the response variable.
+Partial Least Squares (PLS) is a statistical method that is often used in regression and classification analysis. PLS regression is commonly employed when there are high collinearity among the predictor variables, and it aims to find the directions (latent variables or components) that explain both the variance in the predictor variables and the variance in the response variable.  
 
-Partial Least Squares Discriminant Analysis (PLS-DA) is an extension of PLS that is specifically used for classification purposes. PLS-DA combines elements of principal component analysis (PCA) and canonical correlation analysis to find the linear combinations of the original variables (features) that best discriminate between different classes in the response variable.
+Partial Least Squares Discriminant Analysis (PLS-DA) is an extension of PLS that is specifically used for classification purposes. PLS-DA combines elements of principal component analysis (PCA) and canonical correlation analysis to find the linear combinations of the original variables (features) that best discriminate between different classes in the response variable.  
 
-In the context of classification, the goal of PLS-DA is to find a set of latent variables (components) that maximize the separation between different classes while also explaining the variance in the predictor variables. These latent variables are then used to build a predictive model for classifying new observations into predefined classes.
+In the context of classification, the goal of PLS-DA is to find a set of latent variables (components) that maximize the separation between different classes while also explaining the variance in the predictor variables. These latent variables are then used to build a predictive model for classifying new observations into predefined classes.  
 
-PLS and PLS-DA are commonly used in fields such as chemometrics, biology, and other areas where there are complex relationships between variables and a need for effective classification or regression models. They are particularly useful when dealing with high-dimensional data or when there are multicollinearity issues among the predictor variables.
+PLS and PLS-DA are commonly used in fields such as chemometrics, biology, and other areas where there are complex relationships between variables and a need for effective classification or regression models. They are particularly useful when dealing with high-dimensional data or when there are multicollinearity issues among the predictor variables.  
 
-```{r}
+Here the pls method was used to fit the data with the following parameters:  
++ ncomp set to values 0 through 15  
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
 
+```{r pls}
 # Partial Least Squares Model
-Model_pls <- train(
-  Diabetes_binary ~ . -Education,
-  data = diabetes_train,
-  method = "pls",
-  metric = "logLoss",
-  trControl = trainControl(method = "cv", 
-                           number = 5,
-                           preProcOptions = c("center","scale"),
-                           summaryFunction = mnLogLoss,
-                           classProbs = TRUE),
-  tuneGrid = data.frame(ncomp = seq(1:15))
-  )
+pls_model <- train( Diabetes_binary ~ .,
+                    data = diabetes_train,
+                    method = "pls",
+                    metric = "logLoss",
+                    trControl = trainControl(method = "cv", number = 5,
+                                             preProcOptions = c("center","scale"),
+                                             summaryFunction = mnLogLoss,
+                                             classProbs = TRUE),
+                    tuneGrid = data.frame(ncomp = seq(1:15)))
+
+pls_model
+```
+
+The plot below shows the model performance with different ncomp values.
+```{r}
+plot(pls_model)
 
 ```
 
+The best pls model has `{r} pls_model$bestTune$ncomp` number of components in the model with a logLoss of `{r} min(pls_model$results$logLoss)`.
 
-### Another Model
 
+### Naive Bayes Model
+
+Naive Bayes model, also known as a probabilistic classifier, is based on Bayes Theorem with an independence assumption among predictors. Bayes theorem in simple terms involves making an initial assumption of probability (prior probability), and then conditionally updating this probability based on new data or evidence. This prior probability is sequentially updated when new evidence emerges.  
+
+Naive Bayes classifier makes two key assumptions: all predictors are conditionally independent or unrelated, and all predictors contribute equally to the outcome or response. Although these assumptions do not hold well in real-world, they are computationally fast and have shown to have good accuracy in predictions. We wanted to see how naive bayes model works on our data.  
+
+Here the naive bayes method was used to fit the data with the following parameters:  
++ fL values 0 and 0.5  
++ useKernel = TRUE  
++ adjust parameter set to vector (1.0, 2.0, 4.0)
++ cross-validation with 5 folds  
++ log-loss as metric to evaluate model
+
+```{r naive_bayes}
+naive_bayes_model <- train( Diabetes_binary ~ .,
+                    data = diabetes_train,
+                    method = "nb",
+                    metric = "logLoss",
+                    trControl = trainControl(method = "cv", number = 5,
+                                             summaryFunction = mnLogLoss,
+                                             classProbs = TRUE),
+                    tuneGrid = expand.grid(fL = c(0,0.5), usekernel = TRUE, adjust = c(1.0, 2.0, 4.0) ))
+  
+naive_bayes_model
+```
+
+The plot below shows the model performance.
 ```{r}
+plot(naive_bayes_model)
 
 ```
 
+The best naive bayes model has parameters: fl- `{r} naive_bayes_model$bestTune$fL`, and adjust- `{r} naive_bayes_model$bestTune$adjust` with a logLoss of `{r} min(naive_bayes_model$results$logLoss))`.
 
-## Final Model Selection
+
+## Final Model Selection 
+
+For this section we have compiled the model output results of the 6 best models so far. We then applied these model fits on test data set to see their performance.  
+
+### Output from Model Comparison
+Model output results are (not applied to test data set yet):
 
 ```{r}
+# Best model from the first three models (forward, backward, and glm)
+model_name <- names(result1)[apply(result1, MARGIN = 1, FUN = which.min)]
+value <- min(result1)
+
+result2 <- data.frame(model_name = value, 
+            LASSO = min(lasso_fit$results$logLoss),
+            Classification_Tree = min( classification_tree$results$logLoss),
+            Random_Forest = min( rf_model$results$logLoss),
+            Partial_Least_Squares = min( pls_model$results$logLoss),
+            Naive_Bayes = min(naive_bayes_model$results$logLoss))
+
+colnames(result2)[1] <- model_name
+result2[1,]
+
+```
+
+Based on the table above `{r} names(result2)[apply(result2, MARGIN = 1, FUN = which.min)]` is the best model with a logloss value of `{r} min(result2)`
+
+### Application of Model Fits on Test Data
+Here the 6 best model fits used on test data set and results compared.
+
+```{r}
+model_pred <- predict(fit12, newdata = bike_test)
+lasso_pred <- predict(lasso_fit, newdata = diabetes_test)
+classification_tree_pred <- predict(classification_tree, newdata = diabetes_test)
+rf_pred <- predict(rf_model, newdata = diabetes_test)
+pls_pred <- predict(rf_model, newdata = diabetes_test)
+
+
+result3 <- data.frame(model_name = 1,
+                      LASSO = LogLoss)
 
 ```
 
