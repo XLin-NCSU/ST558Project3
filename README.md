@@ -1,4 +1,4 @@
-# ST558Project3
+# ST558 Project 3
 
 ## a brief description of the purpose of the repo
   
