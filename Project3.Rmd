@@ -1,7 +1,6 @@
 ---
 title: "Project 3"
-#output: github_document
-output: pdf_document
+output: github_document
 author: Xi Lin, Sarat Bantupalli
 params: 
   Education: 2
