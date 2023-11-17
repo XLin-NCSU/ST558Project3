@@ -1,14 +1,18 @@
 # ST558 Project 3
 
-## a brief description of the purpose of the repo
-  
-## a list of R packages used
+## Purpose of the repo
+This repo creates predictive models using available data and automates R Markdown reports. We demonstrated it by using [Diabates Health Indicators Data](https://www.kaggle.com/datasets/alexteboul/diabetes-health-indicators-dataset) collected by the Centers of Disease Control and Prevention (CDC).  
+
+## List of R Packages used for the Project
 ```{r}
-library(rmarkdown)
 library(tidyverse)
+library(corrplot)
+library(visreg)
 library(caret)
 ```
-## the code used to create the analyses from a single .Rmd file (i.e. the render() code)
+
+## Render Code 
+Here is the code we used to create analyses from a single .Rmd file.
 
 ```{r}
 library(rmarkdown)
@@ -28,8 +32,8 @@ apply(reports, MARGIN = 1,
       })
 ```
 
-## links to .html files of the generated analyses (which will be created by github pages! Not you!)
-
+## Links to Output Files
+The output files of this analysis can be found at following links:
   For example,
   
   - Analysis for \[College Graduates\]\(college_graduate_analysis.html\). Note you should only
