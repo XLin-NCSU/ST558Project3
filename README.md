@@ -36,6 +36,4 @@ apply(reports, MARGIN = 1,
 The output files of this analysis can be found at following links:
   For example,
   
-  - Analysis for \[College Graduates\]\(college_graduate_analysis.html\). Note you should only
-have a college_graduate_analysis.md file in the repo - github pages will render the .html file
-for you
+  - Analysis for [People with Elementary School or less Education Level]([college_graduate_analysis.html](https://xlin-ncsu.github.io/ST558Project3/Education%20Group%202.html))
