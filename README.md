@@ -36,4 +36,4 @@ apply(reports, MARGIN = 1,
 The output files of this analysis can be found at following links:
   For example,
   
-  - Analysis for [People with Elementary School or less Education Level]([college_graduate_analysis.html](https://xlin-ncsu.github.io/ST558Project3/Education%20Group%202.html))
+  - Analysis for [People with Elementary School or less Education Level] (https://xlin-ncsu.github.io/ST558Project3/Education%20Group%202.html)
