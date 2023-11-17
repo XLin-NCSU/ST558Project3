@@ -19,6 +19,7 @@ library(tidyverse)
 library(corrplot)
 library(visreg)
 library(caret)
+#library(MLmetrics)
 
 ```
 
@@ -276,6 +277,32 @@ g2 + geom_bar(aes(fill = Diabetes_binary)) + theme_bw()
 ```
 The reader should look for trends in how diabetes_status changes for men and women. 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Modeling
 
 ### Splitting Train and Test data sets
@@ -338,7 +365,7 @@ model_1_forward <- train( Diabetes_binary ~ .,
 model_1_forward
 ```
 
-The Logloss value of Forward selection model is `r model_1_forward$results$logLoss`.
+The Logloss value of Forward selection model is `{r} model_1_forward$results$logLoss`.
 
 #### Model 2- Backward Selection Method
 Here we used the *backward selection method* to construct a regression model. We trained the model with all variables from the training data set. Only main effects were considered here. Interaction terms and higher polynomial terms were not considered. The model was trained with the following parameters:  
@@ -363,7 +390,7 @@ model_2_backward <- train( Diabetes_binary ~ .,
 model_2_backward
 ```
 
-The Logloss value of Backward selection model is `r model_2_backward$results$logLoss`.
+The Logloss value of Backward selection model is `{r} model_2_backward$results$logLoss`.
 
 #### Model 3
 Here we fit a basic logistic regression model. We trained the model with all variables from the training data set. Only main effects were considered here. Interaction terms and higher polynomial terms were not considered. The model was trained with the following parameters:  
@@ -386,7 +413,7 @@ model_3_glm <- train( Diabetes_binary ~ .,
 model_3_glm
 ```
 
-The Logloss value of Backward selection model is `r model_3_glm$results$logLoss`.
+The Logloss value of Backward selection model is `{r} model_3_glm$results$logLoss`.
 
 #### Comparison of Models
 The logloss values for all 3 models is tabulated below.
@@ -399,7 +426,7 @@ result1 <- data.frame(Model_1 = model_1_forward$results$logLoss,
 result1[1,]
 ```
 
-The lowest logloss value is for `r names(result1)[apply(result1, MARGIN = 1, FUN = which.min)]` with a value of `r min(result1)`. We choose **`r names(result1)[apply(result1, MARGIN = 1, FUN = which.min)]`** as the best model.
+The lowest logloss value is for `{r} names(result1)[apply(result1, MARGIN = 1, FUN = which.min)]` with a value of `{r} min(result1)`. We choose **`{r} names(result1)[apply(result1, MARGIN = 1, FUN = which.min)]`** as the best model.
 
 #### Best Model Results
 Here we created a R function, *best_result*, that takes the 3 model fits from above as input, then based on the logloss value outputs the best model fit. This function was created to automate the process of choosing the best across all reports. 
@@ -465,7 +492,7 @@ plot(lasso_fit)
 
 ```
 
-The best LASSO model has an optimal $\lambda$ value of `r lasso_fit$bestTune$lambda` with a logLoss of `r min(lasso_fit$results$logLoss)`.
+The best LASSO model has an optimal $\lambda$ value of `{r} lasso_fit$bestTune$lambda` with a logLoss of `{r} min(lasso_fit$results$logLoss)`.
 
 
 ### Classification Tree Model
@@ -500,7 +527,7 @@ The plot below shows the model performance with different complexity parameter v
 
 ```
 
-The best classification tree model has an optimal complexity parameter value of `r classification_tree$bestTune$cp` with a logLoss of `r min( classification_tree$results$logLoss)`.
+The best classification tree model has an optimal complexity parameter value of `{r} classification_tree$bestTune$cp` with a logLoss of `{r} min( classification_tree$results$logLoss)`.
 
 ### Random Forest Model
 
@@ -536,7 +563,7 @@ plot(rf_model)
 
 ```
 
-The best random forest model has `r rf_model$bestTune$mtry` randomly selected predictors with a logLoss of `r min( rf_model$results$logLoss)`.
+The best random forest model has `{r} rf_model$bestTune$mtry` randomly selected predictors with a logLoss of `{r} min( rf_model$results$logLoss)`.
 
 
 ### Partial Least Squares Model
@@ -575,7 +602,7 @@ plot(pls_model)
 
 ```
 
-The best pls model has `r pls_model$bestTune$ncomp` number of components in the model with a logLoss of `r min(pls_model$results$logLoss)`.
+The best pls model has `{r} pls_model$bestTune$ncomp` number of components in the model with a logLoss of `{r} min(pls_model$results$logLoss)`.
 
 
 ### Naive Bayes Model
@@ -610,7 +637,7 @@ plot(naive_bayes_model)
 
 ```
 
-The best naive bayes model has parameters: fl- `r naive_bayes_model$bestTune$fL`, and adjust- `r naive_bayes_model$bestTune$adjust` with a logLoss of `r min(naive_bayes_model$results$logLoss)`.
+The best naive bayes model has parameters: fl- `{r} naive_bayes_model$bestTune$fL`, and adjust- `{r} naive_bayes_model$bestTune$adjust` with a logLoss of `{r} min(naive_bayes_model$results$logLoss))`.
 
 
 ## Final Model Selection 
@@ -643,7 +670,7 @@ result2[1,]
 
 ```
 
-Based on the results from model fits, the best model is **`r names(result2)[apply(result2, MARGIN = 1, FUN = which.min)]`** with a logloss value of **`{r} min(result2)`**. Note, these are the results model fits.
+Based on the results from model fits, the best model is **`{r} names(result2)[apply(result2, MARGIN = 1, FUN = which.min)]`** with a logloss value of **`{r} min(result2)`**. Note, these are the results model fits.
 
 
 ### Application of Model on Test Data
@@ -708,7 +735,7 @@ result3[1,]
 
 
 ### Result
-Based on the model predictions on test data set, the best model is **`r names(result3)[apply(result3, MARGIN = 1, FUN = which.min)]`** with a logloss value of **`r min(result3)`**. 
+Based on the model predictions on test data set, the best model is **`{r} names(result3)[apply(result3, MARGIN = 1, FUN = which.min)]`** with a logloss value of **`{r} min(result3)`**. 
 
 
 
