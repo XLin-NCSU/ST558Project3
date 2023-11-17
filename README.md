@@ -33,7 +33,9 @@ apply(reports, MARGIN = 1,
 ```
 
 ## Links to Output Files
-The output files of this analysis can be found at following links:
-  For example,
-  
-  - Analysis for [People with Elementary School or less Education Level] (https://xlin-ncsu.github.io/ST558Project3/Education%20Group%202.html)
+The output files of this analysis can be found at the following links:
+  - Analysis for People with Elementary School or less level of Education: <https://xlin-ncsu.github.io/ST558Project3/Education%20Group%202.html>
+  - Analysis for People who went to High School but did not graduate: <https://xlin-ncsu.github.io/ST558Project3/Education%20Group%203.html>
+  - Analysis for People with a High School Degree or GED: <https://xlin-ncsu.github.io/ST558Project3/Education%20Group%204.html>
+  - Analysis for People with a 1 to 3 years technical school degree: <https://xlin-ncsu.github.io/ST558Project3/Education%20Group%205.html>
+  - Analysis for People who are College Graduates (1 to 4 years): <https://xlin-ncsu.github.io/ST558Project3/Education%20Group%206.html>
